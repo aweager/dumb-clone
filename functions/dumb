@@ -127,6 +127,18 @@ function dumb() {
                 done
             fi
             ;;
+        list)
+            local link_path clone_path name
+            for link_path in "$DUMB_CLONE_HOME"/*; do
+                name="$(basename "$link_path")"
+                clone_path="$(readlink "$link_path")"
+                if [[ "$clone_path" == "${DumbClone[dest]}"/* ]]; then
+                    printf '%s\n' "$name"
+                else
+                    printf '%s -> %s\n' "$name" "$clone_path"
+                fi
+            done
+            ;;
         *)
             printf 'Unknown dumb command %s\n' "$cmd" >&2
             return 1
