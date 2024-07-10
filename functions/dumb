@@ -1,0 +1,108 @@
+#!/bin/zsh
+
+zmodload zsh/zutil
+zmodload zsh/mapfile
+
+
+typeset -gAH DumbClone
+DumbClone[config]="${XDG_CONFIG_HOME-${HOME}/.config}/dumb-clone"
+DumbClone[data]="${XDG_DATA_HOME-${HOME}/.local/share}/dumb-clone"
+DumbClone[dest]="$DumbClone[data]/dest"
+
+if [[ -z "$DUMB_CLONE_HOME" ]]; then
+    export DUMB_CLONE_HOME="${DumbClone[data]}/repos"
+fi
+
+mkdir -p "$DUMB_CLONE_HOME" "$DumbClone[config]" "$DumbClone[dest]"
+
+function dumb() {
+    setopt local_options err_return
+
+    local cmd="$1"
+    shift
+
+    case "$cmd" in
+        clone)
+            local -a arg_pin
+            zparseopts -D -E -K -- \
+                -pin:=arg_pin
+
+            local remote="$1"
+            local name="$2"
+
+            if [[ -z "$remote" || -z "$name" ]]; then
+                printf '%s\n' \
+                    'Usage: dumb clone [--pin <id>] remote_url name' >&2
+                return 1
+            fi
+
+            local link_path="$DUMB_CLONE_HOME/$name"
+            local clone_path="${DumbClone[dest]}/$name"
+            local something_changed
+            if [[ ! -h "$link_path" ]]; then
+                printf 'Dumb cloning %s\n' "$name"
+                if ! git clone "$remote" "$clone_path" &> /dev/null; then
+                    local err_code="$?"
+                    printf 'Error cloning %s!\n' "$remote" >&2
+                    return $err_code
+                fi
+                ln -s "$clone_path" "$link_path"
+                something_changed=1
+            fi
+
+            if [[ -n $arg_pin ]]; then
+                if ! git -C "$clone_path" checkout "$arg_pin[-1]" &> /dev/null; then
+                    local err_code="$?"
+                    printf 'Error checking out %s!\n' "$arg_pin[-1]"
+                    return $err_code
+                fi
+                something_changed=1  # TODO did it really tho
+            fi
+
+            if [[ -n "$something_changed" ]]; then
+                ln -s "$clone_path"
+                local locks="$mapfile[${DumbClone[config]}/dumb-clone.lock]"
+                local -A Locks
+                if [[ -n "$locks" ]]; then
+                    local lock_line
+                    for lock_line in "${(f)locks}"; do
+                        Locks[${lock_line% *}]="${lock_line##* }"
+                    done
+                fi
+                Locks[$name]="$(git -C "$clone_path" rev-parse HEAD)"
+
+                local key
+                for key in "${(@nk)Locks}"; do
+                    printf '%s %s\n' "$key" "$Locks[$key]"
+                done > "${DumbClone[config]}/dumb-clone.lock"
+            fi
+            ;;
+        link)
+
+            ;;
+        update)
+            local name="$1"
+            if [[ -n "$name" ]]; then
+                local clone_path="${DumbClone[dest]}/$name"
+                if [[ -d "$clone_path" ]]; then
+                    local branch="$(git -C "$clone_path" --show-current)"
+                    if [[ -z "$branch" ]]; then
+                        printf 'Repo %s is not on a branch\n' "$name" >&2
+                        return 1
+                    fi
+
+                    if ! git -C "$clone_path" pull &> /dev/null; then
+                        local err_code="$?"
+                        printf 'Error pulling %s!\n' "$name" >&2
+                        return $err_code
+                    fi
+                fi
+            ;;
+        *)
+            printf 'Unknown dumb command %s\n' "$cmd" >&2
+            return 1
+            ;;
+    esac
+}
+
+dumb "$@"
