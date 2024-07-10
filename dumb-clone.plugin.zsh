@@ -10,4 +10,4 @@ if [[ $PMSPEC != *b* ]]; then
     export PATH
 fi
 
-autoload -Uz dumb-clone
+autoload -Uz dumb

@@ -28,10 +28,14 @@ function dumb() {
             local remote="$1"
             local name="$2"
 
-            if [[ -z "$remote" || -z "$name" ]]; then
+            if [[ -z "$remote" ]]; then
                 printf '%s\n' \
-                    'Usage: dumb clone [--pin <id>] remote_url name' >&2
+                    'Usage: dumb clone [--pin <id>] remote_url [name]' >&2
                 return 1
+            fi
+
+            if [[ -z "$name" ]]; then
+                name="$(basename "$remote" .git)"
             fi
 
             local link_path="$DUMB_CLONE_HOME/$name"
@@ -39,6 +43,9 @@ function dumb() {
             if [[ ! -h "$link_path" ]]; then
                 if [[ ! -d "$clone_path" ]]; then
                     printf 'Dumb cloning %s\n' "$name"
+                    if [[ "$remote" == */* ]]; then
+                        remote="git@github.com:${remote}.git"
+                    fi
                     if ! git clone "$remote" "$clone_path" &> /dev/null; then
                         local err_code="$?"
                         printf 'Error cloning %s!\n' "$remote" >&2
