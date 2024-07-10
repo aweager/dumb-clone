@@ -67,10 +67,14 @@ function dumb() {
         link)
             local dir="$1"
             local name="$2"
-            if [[ -z "$dir" || -z "$name" ]]; then
+            if [[ -z "$dir" ]]; then
                 printf '%s\n' \
                     'Usage: dumb link directory name' >&2
                 return 1
+            fi
+
+            if [[ -z "$name" ]]; then
+                name="$(basename "$dir")"
             fi
 
             if [[ -h "$DUMB_CLONE_HOME/$name" ]]; then
