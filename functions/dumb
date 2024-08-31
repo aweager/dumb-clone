@@ -139,6 +139,37 @@ function dumb() {
                 fi
             done
             ;;
+        delete)
+            local name="$1"
+            local link_path="$DUMB_CLONE_HOME/$name"
+            local clone_path="$(readlink "$link_path")"
+            if [[ "$clone_path" == "${DumbClone[dest]}"/* ]]; then
+                printf 'Deleting %s\n' "$name"
+                rm "$link_path"
+                rm -rf "$clone_path"
+            else
+                printf '%s is linked to %s\n' "$name" "$clone_path" >&2
+                return 1
+            fi
+            ;;
+        clean)
+            local link_path clone_path name actual_clone_path
+            for clone_path in "${DumbClone[dest]}"/*; do
+                name="$(basename "$clone_path")"
+                link_path="$DUMB_CLONE_HOME/$name"
+
+                if [[ -e "$link_path" ]]; then
+                    actual_clone_path="$(readlink "$link_path")"
+                else
+                    actual_clone_path=""
+                fi
+
+                if [[ "$clone_path" != "$actual_clone_path" ]]; then
+                    printf 'Cleaning up %s\n' "$name"
+                    rm -rf "$clone_path"
+                fi
+            done
+            ;;
         *)
             printf 'Unknown dumb command %s\n' "$cmd" >&2
             return 1
