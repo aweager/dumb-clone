@@ -43,7 +43,7 @@ function dumb() {
             if [[ ! -h "$link_path" ]]; then
                 if [[ ! -d "$clone_path" ]]; then
                     printf 'Dumb cloning %s\n' "$name"
-                    if [[ "$remote" == */* ]]; then
+                    if [[ "$remote" != git@* ]]; then
                         remote="git@github.com:${remote}.git"
                     fi
                     if ! git clone "$remote" "$clone_path" &> /dev/null; then
