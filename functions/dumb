@@ -115,7 +115,7 @@ function dumb() {
                 fi
             else
                 local clone_path branch
-                for clone_path in "${DumbClone[dest]}"/*; do
+                for clone_path in "${DumbClone[dest]}"/*(N); do
                     name="$(basename "$clone_path")"
                     branch="$(git -C "$clone_path" branch --show-current)"
                     if [[ -n "$branch" ]]; then
@@ -127,9 +127,22 @@ function dumb() {
                 done
             fi
             ;;
+        update-linked)
+            local link_path clone_path name
+            for link_path in "$DUMB_CLONE_HOME"/*(N); do
+                name="$(basename "$link_path")"
+                clone_path="$(readlink "$link_path")"
+                if [[ "$clone_path" != "${DumbClone[dest]}"/* ]]; then
+                    printf 'Updating linked repo %s -> %s\n' "$name" "$clone_path"
+                    if ! git -C "$clone_path" pull &> /dev/null; then
+                        printf 'Error pulling %s!\n' "$(basename "$clone_path")" >&2
+                    fi
+                fi
+            done
+            ;;
         list)
             local link_path clone_path name
-            for link_path in "$DUMB_CLONE_HOME"/*; do
+            for link_path in "$DUMB_CLONE_HOME"/*(N); do
                 name="$(basename "$link_path")"
                 clone_path="$(readlink "$link_path")"
                 if [[ "$clone_path" == "${DumbClone[dest]}"/* ]]; then
@@ -154,7 +167,7 @@ function dumb() {
             ;;
         clean)
             local link_path clone_path name actual_clone_path
-            for clone_path in "${DumbClone[dest]}"/*; do
+            for clone_path in "${DumbClone[dest]}"/*(N); do
                 name="$(basename "$clone_path")"
                 link_path="$DUMB_CLONE_HOME/$name"
 
